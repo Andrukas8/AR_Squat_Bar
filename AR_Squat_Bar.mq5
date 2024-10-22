@@ -16,16 +16,19 @@
 #property indicator_type1   DRAW_ARROW
 #property indicator_color1  clrLimeGreen
 #property indicator_style1  STYLE_SOLID
-#property indicator_width1  2
+#property indicator_width1  1
 //--- plot DN
 #property indicator_label2  "Down"
 #property indicator_type2   DRAW_ARROW
 #property indicator_color2  clrTomato
 #property indicator_style2  STYLE_SOLID
-#property indicator_width2  2
+#property indicator_width2  1
 
 // -- indicator inputs
-input double close_range = 0.5; // Close Range
+input double close_range = 0.5; // Close Range (upper/lower portion for closing)
+input double gap_coef = 2; // Gap Coefficient (distance = gap coef x avg range)
+input int range_avg_period = 21; // Average Range Averaging Range
+input int ma_period = 21; // MA Period
 
 //--- indicator buffers
 double BufferUP[];
@@ -45,13 +48,13 @@ int OnInit()
    PlotIndexSetInteger(0,PLOT_ARROW,225); // Arrow up
    PlotIndexSetInteger(1,PLOT_ARROW,226); // Arrow Down
 
-   PlotIndexSetInteger(0,PLOT_ARROW_SHIFT,-50);
-   PlotIndexSetInteger(1,PLOT_ARROW_SHIFT,50);
+   PlotIndexSetInteger(0,PLOT_ARROW_SHIFT,50);
+   PlotIndexSetInteger(1,PLOT_ARROW_SHIFT,-50);
 
 //--- setting indicator parameters
    IndicatorSetString(INDICATOR_SHORTNAME,"SquatBar");
    IndicatorSetInteger(INDICATOR_DIGITS,Digits());
-//--- setting buffer arrays as timeseries
+//--- setting buffer arrays as time-series
    ArraySetAsSeries(BufferUP,true);
    ArraySetAsSeries(BufferDN,true);
 
@@ -86,15 +89,30 @@ int OnCalculate(const int rates_total,
       ArrayInitialize(BufferUP,EMPTY_VALUE);
       ArrayInitialize(BufferDN,EMPTY_VALUE);
      }
-//--- Indexing arrays as timeseries
+//--- Indexing arrays as time-series
    ArraySetAsSeries(low,true);
    ArraySetAsSeries(high,true);
    ArraySetAsSeries(close,true);
 
 //--- Calculating the indicator
 
-   for(int i=limit; i>=0 && !IsStopped(); i--)
+   for(int i=limit-ma_period; i>=0 && !IsStopped(); i--)
      {
+
+      double sum = 0;
+      double ma = 0;
+      double sum_range = 0;
+      double avg_range = 0;
+
+      for(int j=0;j<ma_period;j++)
+        {
+         sum += close[i+j];
+         sum_range += high[i+j] - low[i+j];
+        }
+
+      ma = sum / ma_period;
+      avg_range = sum_range / range_avg_period;
+
 
       bool strike_up=false;
       bool strike_dn=false;
@@ -107,6 +125,7 @@ int OnCalculate(const int rates_total,
          && close[i] > high[i] - (high[i] - low[i]) * close_range
          && mfi_curr < mfi_prev
          && tick_volume[i] > tick_volume[i+1]
+         && high[i] < ma - gap_coef * avg_range
       )
         {
          strike_up = true; // GREEN
@@ -119,6 +138,7 @@ int OnCalculate(const int rates_total,
          && close[i] < low[i] + (high[i] - low[i]) * close_range
          && mfi_curr < mfi_prev
          && tick_volume[i] > tick_volume[i+1]
+         && low[i] > ma + gap_coef * avg_range
       )
         {
          strike_dn = true; // RED
@@ -145,4 +165,5 @@ int OnCalculate(const int rates_total,
 
 //+------------------------------------------------------------------+
 
+//+------------------------------------------------------------------+
 //+------------------------------------------------------------------+
