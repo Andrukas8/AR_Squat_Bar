@@ -30,6 +30,7 @@ input double close_range = 0.5; // Close Range
 //--- indicator buffers
 double BufferUP[];
 double BufferDN[];
+int handleAlligator;
 
 //+------------------------------------------------------------------+
 //| Custom indicator initialization function                         |
@@ -94,16 +95,35 @@ int OnCalculate(const int rates_total,
 
    for(int i=limit; i>=0 && !IsStopped(); i--)
      {
+
       bool strike_up=false;
       bool strike_dn=false;
+
       double mfi_curr = (high[i] - low[i]) / tick_volume[i];
       double mfi_prev = (high[i+1] - low[i+1]) / tick_volume[i+1];
 
-      if(low[i] < low[i+1] && close[i] > high[i] - (high[i] - low[i])*close_range && mfi_curr < mfi_prev && tick_volume[i] > tick_volume[i+1])
-         strike_up = true;
+      if(
+         low[i] < low[i+1]
+         && close[i] > high[i] - (high[i] - low[i]) * close_range
+         && mfi_curr < mfi_prev
+         && tick_volume[i] > tick_volume[i+1]
+      )
+        {
+         strike_up = true; // GREEN
 
-      if(high[i] > high[i+1] && close[i] < low[i] + (high[i] - low[i])*close_range && mfi_curr < mfi_prev && tick_volume[i] > tick_volume[i+1])
-         strike_dn = true;
+        }
+
+
+      if(
+         high[i] > high[i+1]
+         && close[i] < low[i] + (high[i] - low[i]) * close_range
+         && mfi_curr < mfi_prev
+         && tick_volume[i] > tick_volume[i+1]
+      )
+        {
+         strike_dn = true; // RED
+        }
+
 
       if(strike_up)
          BufferUP[i]=close[i];
@@ -121,6 +141,8 @@ int OnCalculate(const int rates_total,
 
   }
 //+------------------------------------------------------------------+
+//+------------------------------------------------------------------+
+
 //+------------------------------------------------------------------+
 
 //+------------------------------------------------------------------+
